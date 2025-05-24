@@ -1,27 +1,91 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
+import { signIn, getSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Bot, Mail, Lock, User, Github } from "lucide-react"
+import { toast } from "sonner"
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
+  const [loginData, setLoginData] = useState({ email: "", password: "" })
+  const [signupData, setSignupData] = useState({ name: "", email: "", password: "" })
+  const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    // Simulate login
-    setTimeout(() => {
+
+    try {
+      const result = await signIn("credentials", {
+        email: loginData.email,
+        password: loginData.password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        toast.error("Invalid credentials. Please try again.")
+      } else {
+        toast.success("Login successful!")
+        router.push("/chat")
+      }
+    } catch (error) {
+      toast.error("An error occurred. Please try again.")
+    } finally {
       setIsLoading(false)
-      window.location.href = "/chat"
-    }, 1000)
+    }
+  }
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(signupData),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        toast.success("Account created successfully! Please sign in.")
+        // Auto-login after successful registration
+        const result = await signIn("credentials", {
+          email: signupData.email,
+          password: signupData.password,
+          redirect: false,
+        })
+
+        if (!result?.error) {
+          router.push("/chat")
+        }
+      } else {
+        toast.error(data.error || "Failed to create account")
+      }
+    } catch (error) {
+      toast.error("An error occurred. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleOAuthSignIn = async (provider: string) => {
+    setIsLoading(true)
+    try {
+      await signIn(provider, { callbackUrl: "/chat" })
+    } catch (error) {
+      toast.error("Authentication failed. Please try again.")
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -50,12 +114,20 @@ export default function LoginPage() {
                 <CardDescription>Enter your email and password to access your account</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input id="email" type="email" placeholder="Enter your email" className="pl-10" required />
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        placeholder="Enter your email" 
+                        className="pl-10" 
+                        required 
+                        value={loginData.email}
+                        onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -68,6 +140,8 @@ export default function LoginPage() {
                         placeholder="Enter your password"
                         className="pl-10"
                         required
+                        value={loginData.password}
+                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                       />
                     </div>
                   </div>
@@ -86,11 +160,21 @@ export default function LoginPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <Button variant="outline" className="w-full">
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={() => handleOAuthSignIn("github")}
+                    disabled={isLoading}
+                  >
                     <Github className="mr-2 h-4 w-4" />
                     GitHub
                   </Button>
-                  <Button variant="outline" className="w-full">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => handleOAuthSignIn("google")}
+                    disabled={isLoading}
+                  >
                     <Mail className="mr-2 h-4 w-4" />
                     Google
                   </Button>
@@ -113,19 +197,35 @@ export default function LoginPage() {
                 <CardDescription>Sign up for a new account to get started</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input id="name" type="text" placeholder="Enter your full name" className="pl-10" required />
+                      <Input 
+                        id="name" 
+                        type="text" 
+                        placeholder="Enter your full name" 
+                        className="pl-10" 
+                        required 
+                        value={signupData.name}
+                        onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-email">Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input id="signup-email" type="email" placeholder="Enter your email" className="pl-10" required />
+                      <Input 
+                        id="signup-email" 
+                        type="email" 
+                        placeholder="Enter your email" 
+                        className="pl-10" 
+                        required 
+                        value={signupData.email}
+                        onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -135,9 +235,12 @@ export default function LoginPage() {
                       <Input
                         id="signup-password"
                         type="password"
-                        placeholder="Create a password"
+                        placeholder="Create a password (min 8 characters)"
                         className="pl-10"
                         required
+                        minLength={8}
+                        value={signupData.password}
+                        onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                       />
                     </div>
                   </div>
@@ -156,11 +259,21 @@ export default function LoginPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <Button variant="outline" className="w-full">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => handleOAuthSignIn("github")}
+                    disabled={isLoading}
+                  >
                     <Github className="mr-2 h-4 w-4" />
                     GitHub
                   </Button>
-                  <Button variant="outline" className="w-full">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => handleOAuthSignIn("google")}
+                    disabled={isLoading}
+                  >
                     <Mail className="mr-2 h-4 w-4" />
                     Google
                   </Button>

@@ -1,20 +1,29 @@
 import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
+import { SessionProvider } from 'next-auth/react'
+import { Toaster } from 'sonner'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.dev',
+  title: 'ChatAI Pro - Advanced AI Chat Platform',
+  description: 'Chat with multiple AI models including GPT-4, Claude, and Gemini in one powerful platform.',
 }
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={inter.className}>
+        <SessionProvider>
+          {children}
+          <Toaster position="top-right" richColors />
+        </SessionProvider>
+      </body>
     </html>
   )
 }

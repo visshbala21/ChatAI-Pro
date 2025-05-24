@@ -1,24 +1,159 @@
 import { openai } from "@ai-sdk/openai"
+import { anthropic } from "@ai-sdk/anthropic"
+import { google } from "@ai-sdk/google"
 import { streamText } from "ai"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { db } from "@/lib/db"
+import { conversations, messages, users, usageTracking } from "@/lib/db/schema"
+import { eq } from "drizzle-orm"
+import { NextRequest } from "next/server"
 
 export const maxDuration = 30
 
-export async function POST(req: Request) {
-  const { messages, model = "gpt-4" } = await req.json()
-
-  // Map model IDs to actual model names
-  const modelMap: Record<string, string> = {
-    "gpt-4": "gpt-4",
-    "gpt-3.5-turbo": "gpt-3.5-turbo",
-    "claude-3": "gpt-4", // Fallback to GPT-4 for demo
-    "gemini-pro": "gpt-4", // Fallback to GPT-4 for demo
+// AI Provider configurations
+const getAIProvider = (model: string) => {
+  const modelMap: Record<string, { provider: any; modelName: string }> = {
+    "gpt-4": { provider: openai, modelName: "gpt-4" },
+    "gpt-4-turbo": { provider: openai, modelName: "gpt-4-turbo" },
+    "gpt-3.5-turbo": { provider: openai, modelName: "gpt-3.5-turbo" },
+    "claude-3-opus": { provider: anthropic, modelName: "claude-3-opus-20240229" },
+    "claude-3-sonnet": { provider: anthropic, modelName: "claude-3-sonnet-20240229" },
+    "claude-3-haiku": { provider: anthropic, modelName: "claude-3-haiku-20240307" },
+    "gemini-pro": { provider: google, modelName: "models/gemini-pro" },
+    "gemini-pro-vision": { provider: google, modelName: "models/gemini-pro-vision" },
   }
 
-  const result = streamText({
-    model: openai(modelMap[model] || "gpt-4"),
-    messages,
-    system: `You are a helpful AI assistant. You are currently running as ${model}. Be conversational and helpful.`,
-  })
+  return modelMap[model] || modelMap["gpt-4"]
+}
 
-  return result.toDataStreamResponse()
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return new Response("Unauthorized", { status: 401 })
+    }
+
+    const { messages: chatMessages, model = "gpt-4", conversationId } = await req.json()
+
+    // Get user data
+    const userData = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .limit(1)
+
+    if (!userData[0]) {
+      return new Response("User not found", { status: 404 })
+    }
+
+    const user = userData[0]
+
+    // Check API usage limits
+    if (user.apiUsage >= user.apiLimit) {
+      return new Response("API usage limit exceeded", { status: 429 })
+    }
+
+    // Get or create conversation
+    let conversation
+    if (conversationId) {
+      const existingConversation = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, conversationId))
+        .limit(1)
+      
+      conversation = existingConversation[0]
+    } else {
+      // Create new conversation
+      const newConversation = await db
+        .insert(conversations)
+        .values({
+          userId: user.id,
+          title: chatMessages[0]?.content?.slice(0, 50) || "New Chat",
+          model,
+        })
+        .returning()
+      
+      conversation = newConversation[0]
+    }
+
+    // Get AI provider configuration
+    const { provider, modelName } = getAIProvider(model)
+
+    // Create system message based on model
+    const systemMessage = `You are a helpful AI assistant powered by ${model}. You are knowledgeable, conversational, and helpful. Provide accurate and useful responses while being engaging and friendly.`
+
+    // Stream the AI response
+    const result = streamText({
+      model: provider(modelName),
+      messages: [
+        { role: "system", content: systemMessage },
+        ...chatMessages,
+      ],
+      temperature: 0.7,
+      maxTokens: 2048,
+    })
+
+    // Save user message to database
+    await db.insert(messages).values({
+      conversationId: conversation.id,
+      role: "user",
+      content: chatMessages[chatMessages.length - 1].content,
+    })
+
+    // Track the response and save assistant message
+    let assistantMessage = ""
+    let tokensUsed = 0
+
+    const stream = result.toDataStreamResponse({
+      onFinish: async (event) => {
+        assistantMessage = event.text || ""
+        tokensUsed = event.usage?.totalTokens || 0
+
+        // Save assistant message
+        await db.insert(messages).values({
+          conversationId: conversation.id,
+          role: "assistant",
+          content: assistantMessage,
+          metadata: {
+            model,
+            tokensUsed,
+            finishReason: event.finishReason,
+          },
+        })
+
+        // Track usage
+        await db.insert(usageTracking).values({
+          userId: user.id,
+          conversationId: conversation.id,
+          model,
+          tokensUsed,
+          cost: Math.ceil(tokensUsed * 0.002), // Rough cost calculation in cents
+        })
+
+        // Update user API usage
+        await db
+          .update(users)
+          .set({ 
+            apiUsage: user.apiUsage + 1,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, user.id))
+
+        // Update conversation timestamp
+        await db
+          .update(conversations)
+          .set({ updatedAt: new Date() })
+          .where(eq(conversations.id, conversation.id))
+      },
+    })
+
+    return stream
+
+  } catch (error) {
+    console.error("Chat API error:", error)
+    return new Response("Internal server error", { status: 500 })
+  }
 }
