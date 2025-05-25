@@ -69,9 +69,48 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      // Handle OAuth users (Google, GitHub)
+      if (account?.provider === "google" || account?.provider === "github") {
+        try {
+          // Check if user exists in database
+          const existingUser = await db.select().from(users).where(eq(users.email, user.email!)).limit(1)
+          
+          if (!existingUser[0]) {
+            // Create new user in database
+            await db.insert(users).values({
+              email: user.email!,
+              name: user.name || "",
+              image: user.image || "",
+              isActive: true,
+              subscription: "free",
+              apiUsage: 0,
+              apiLimit: 100,
+            })
+          }
+        } catch (error) {
+          console.error("Error handling OAuth user:", error)
+          return false
+        }
+      }
+      return true
+    },
+    async jwt({ token, user, account }) {
       if (user) {
-        token.id = user.id
+        if (account?.provider === "google" || account?.provider === "github") {
+          // For OAuth users, get the database user ID by email
+          try {
+            const dbUser = await db.select().from(users).where(eq(users.email, user.email!)).limit(1)
+            if (dbUser[0]) {
+              token.id = dbUser[0].id
+            }
+          } catch (error) {
+            console.error("Error fetching OAuth user:", error)
+          }
+        } else {
+          // For credential users
+          token.id = (user as any).id
+        }
       }
       return token
     },
