@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { useChat } from "@ai-sdk/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { Bot, User, Send, Settings, Menu, Sparkles } from "lucide-react"
+import { Bot, User, Send, Settings, Menu, Sparkles, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 const AI_MODELS = [
@@ -20,8 +22,17 @@ const AI_MODELS = [
 ]
 
 export default function ChatPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [selectedModel, setSelectedModel] = useState("gpt-4")
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login")
+    }
+  }, [status, router])
 
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
     api: "/api/chat",
@@ -29,6 +40,20 @@ export default function ChatPage() {
   })
 
   const currentModel = AI_MODELS.find((model) => model.id === selectedModel)
+
+  // Show loading spinner while checking authentication
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!session) {
+    return null
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -89,6 +114,10 @@ export default function ChatPage() {
               </Link>
             </Button>
           </div>
+
+          <Separator />
+
+          <div className="text-xs text-gray-500 p-2">Signed in as {session.user?.email}</div>
         </div>
       </div>
 
@@ -140,14 +169,7 @@ export default function ChatPage() {
                       message.role === "user" ? "bg-blue-600 text-white" : "bg-white border shadow-sm"
                     }`}
                   >
-                    <div className="whitespace-pre-wrap">
-                      {message.parts?.map((part, index) => {
-                        if (part.type === "text") {
-                          return <span key={index}>{part.text}</span>
-                        }
-                        return null
-                      }) || message.content}
-                    </div>
+                    <div className="whitespace-pre-wrap">{message.content}</div>
                   </div>
                 </div>
               </div>

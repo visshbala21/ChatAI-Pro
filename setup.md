@@ -7,16 +7,16 @@
 Your `.env.local` file has been created with placeholder values. You need to fill in the following:
 
 #### Required (Minimum to run):
-```bash
+\`\`\`bash
 # Add your OpenAI API key (get from https://platform.openai.com)
 OPENAI_API_KEY="sk-your-openai-key-here"
 
 # Set up a PostgreSQL database (local or cloud)
 DATABASE_URL="postgresql://username:password@localhost:5432/chatai_pro"
-```
+\`\`\`
 
 #### Optional (for full functionality):
-```bash
+\`\`\`bash
 # For Anthropic Claude models
 ANTHROPIC_API_KEY="sk-ant-your-anthropic-key"
 
@@ -30,7 +30,7 @@ GITHUB_CLIENT_SECRET="your-github-client-secret"
 # For Google OAuth
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
-```
+\`\`\`
 
 ### 2. Database Setup
 
@@ -46,16 +46,16 @@ GOOGLE_CLIENT_SECRET="your-google-client-secret"
 
 ### 3. Generate Database Schema
 
-```bash
+\`\`\`bash
 npm run db:generate
 npm run db:migrate
-```
+\`\`\`
 
 ### 4. Start Development Server
 
-```bash
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
 Visit [http://localhost:3000](http://localhost:3000)
 
@@ -138,4 +138,4 @@ Once everything is working:
 - Review the code comments for implementation details
 - Create an issue if you encounter problems
 
-Happy coding! 🚀 
+Happy coding! 🚀

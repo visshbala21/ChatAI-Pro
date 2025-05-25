@@ -1,13 +1,11 @@
 import { openai } from "@ai-sdk/openai"
-import { anthropic } from "@ai-sdk/anthropic"
-import { google } from "@ai-sdk/google"
 import { streamText } from "ai"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { conversations, messages, users, usageTracking } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
-import { NextRequest } from "next/server"
+import type { NextRequest } from "next/server"
 
 export const maxDuration = 30
 
@@ -17,11 +15,8 @@ const getAIProvider = (model: string) => {
     "gpt-4": { provider: openai, modelName: "gpt-4" },
     "gpt-4-turbo": { provider: openai, modelName: "gpt-4-turbo" },
     "gpt-3.5-turbo": { provider: openai, modelName: "gpt-3.5-turbo" },
-    "claude-3-opus": { provider: anthropic, modelName: "claude-3-opus-20240229" },
-    "claude-3-sonnet": { provider: anthropic, modelName: "claude-3-sonnet-20240229" },
-    "claude-3-haiku": { provider: anthropic, modelName: "claude-3-haiku-20240307" },
-    "gemini-pro": { provider: google, modelName: "models/gemini-pro" },
-    "gemini-pro-vision": { provider: google, modelName: "models/gemini-pro-vision" },
+    "claude-3": { provider: openai, modelName: "gpt-4" }, // Fallback for demo
+    "gemini-pro": { provider: openai, modelName: "gpt-4" }, // Fallback for demo
   }
 
   return modelMap[model] || modelMap["gpt-4"]
@@ -30,7 +25,7 @@ const getAIProvider = (model: string) => {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
+
     if (!session?.user?.id) {
       return new Response("Unauthorized", { status: 401 })
     }
@@ -38,11 +33,7 @@ export async function POST(req: NextRequest) {
     const { messages: chatMessages, model = "gpt-4", conversationId } = await req.json()
 
     // Get user data
-    const userData = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, session.user.id))
-      .limit(1)
+    const userData = await db.select().from(users).where(eq(users.id, session.user.id)).limit(1)
 
     if (!userData[0]) {
       return new Response("User not found", { status: 404 })
@@ -63,7 +54,7 @@ export async function POST(req: NextRequest) {
         .from(conversations)
         .where(eq(conversations.id, conversationId))
         .limit(1)
-      
+
       conversation = existingConversation[0]
     } else {
       // Create new conversation
@@ -75,7 +66,7 @@ export async function POST(req: NextRequest) {
           model,
         })
         .returning()
-      
+
       conversation = newConversation[0]
     }
 
@@ -88,10 +79,7 @@ export async function POST(req: NextRequest) {
     // Stream the AI response
     const result = streamText({
       model: provider(modelName),
-      messages: [
-        { role: "system", content: systemMessage },
-        ...chatMessages,
-      ],
+      messages: [{ role: "system", content: systemMessage }, ...chatMessages],
       temperature: 0.7,
       maxTokens: 2048,
     })
@@ -104,13 +92,10 @@ export async function POST(req: NextRequest) {
     })
 
     // Track the response and save assistant message
-    let assistantMessage = ""
-    let tokensUsed = 0
-
     const stream = result.toDataStreamResponse({
       onFinish: async (event) => {
-        assistantMessage = event.text || ""
-        tokensUsed = event.usage?.totalTokens || 0
+        const assistantMessage = event.text || ""
+        const tokensUsed = event.usage?.totalTokens || 0
 
         // Save assistant message
         await db.insert(messages).values({
@@ -136,22 +121,18 @@ export async function POST(req: NextRequest) {
         // Update user API usage
         await db
           .update(users)
-          .set({ 
+          .set({
             apiUsage: user.apiUsage + 1,
             updatedAt: new Date(),
           })
           .where(eq(users.id, user.id))
 
         // Update conversation timestamp
-        await db
-          .update(conversations)
-          .set({ updatedAt: new Date() })
-          .where(eq(conversations.id, conversation.id))
+        await db.update(conversations).set({ updatedAt: new Date() }).where(eq(conversations.id, conversation.id))
       },
     })
 
     return stream
-
   } catch (error) {
     console.error("Chat API error:", error)
     return new Response("Internal server error", { status: 500 })

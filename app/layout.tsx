@@ -1,14 +1,15 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-import { SessionProvider } from 'next-auth/react'
-import { Toaster } from 'sonner'
+import type React from "react"
+import type { Metadata } from "next"
+import { Inter } from "next/font/google"
+import "./globals.css"
+import { Providers } from "@/components/providers"
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: 'ChatAI Pro - Advanced AI Chat Platform',
-  description: 'Chat with multiple AI models including GPT-4, Claude, and Gemini in one powerful platform.',
+  title: "ChatAI Pro - Advanced AI Chat Platform",
+  description: "Chat with multiple AI models including GPT-4, Claude, and Gemini in one powerful platform.",
+    generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -19,10 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <SessionProvider>
-          {children}
-          <Toaster position="top-right" richColors />
-        </SessionProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

@@ -41,22 +41,22 @@ A modern, full-stack AI chat application built with Next.js 15, featuring multip
 
 ### 1. Clone and Install
 
-```bash
+\`\`\`bash
 git clone <your-repo-url>
 cd ChatAI-Pro
 pnpm install
-```
+\`\`\`
 
 ### 2. Environment Setup
 
 Copy the environment template:
-```bash
+\`\`\`bash
 cp .env.example .env.local
-```
+\`\`\`
 
 Fill in your environment variables in `.env.local`:
 
-```env
+\`\`\`env
 # Database
 DATABASE_URL="postgresql://username:password@localhost:5432/chatai_pro"
 
@@ -74,22 +74,22 @@ GITHUB_CLIENT_ID="..."
 GITHUB_CLIENT_SECRET="..."
 GOOGLE_CLIENT_ID="..."
 GOOGLE_CLIENT_SECRET="..."
-```
+\`\`\`
 
 ### 3. Database Setup
 
 Generate and run database migrations:
-```bash
+\`\`\`bash
 pnpm db:generate
 pnpm db:migrate
-```
+\`\`\`
 
 ### 4. Development
 
 Start the development server:
-```bash
+\`\`\`bash
 pnpm dev
-```
+\`\`\`
 
 Visit [http://localhost:3000](http://localhost:3000) to see your application.
 
@@ -129,7 +129,7 @@ For Google OAuth:
 
 ## 📁 Project Structure
 
-```
+\`\`\`
 ChatAI-Pro/
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
@@ -147,7 +147,7 @@ ChatAI-Pro/
 │       └── index.ts      # Database connection
 ├── middleware.ts          # Route protection
 └── drizzle.config.ts     # Database configuration
-```
+\`\`\`
 
 ## 🚀 Deployment
 
