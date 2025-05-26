@@ -72,9 +72,6 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
   },
   callbacks: {
-<<<<<<< HEAD
-    async jwt({ token, user }) {
-=======
     async signIn({ user, account, profile }) {
       // Handle OAuth users (Google, GitHub)
       if (account?.provider === "google" || account?.provider === "github") {
@@ -105,7 +102,6 @@ export const authOptions: NextAuthOptions = {
       return true
     },
     async jwt({ token, user, account }) {
->>>>>>> 244ac881fc64fb6f507ea48326e7a1a10c7793cc
       if (user) {
         token.id = user.id
       }
@@ -113,7 +109,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id as string
+        (session.user as any).id = token.id as string
       }
       return session
     },
