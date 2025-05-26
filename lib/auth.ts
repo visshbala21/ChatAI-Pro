@@ -102,7 +102,18 @@ export const authOptions: NextAuthOptions = {
       return true
     },
     async jwt({ token, user, account }) {
-      if (user) {
+      if (user && (account?.provider === "google" || account?.provider === "github")) {
+        // For OAuth users, get the database user ID by email
+        try {
+          const dbUser = await db.select().from(users).where(eq(users.email, user.email!)).limit(1)
+          if (dbUser[0]) {
+            token.id = dbUser[0].id
+          }
+        } catch (error) {
+          console.error("Error fetching OAuth user:", error)
+        }
+      } else if (user) {
+        // For credential users, use the existing ID
         token.id = user.id
       }
       return token
