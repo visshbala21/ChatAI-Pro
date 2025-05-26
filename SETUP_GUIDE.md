@@ -14,36 +14,36 @@ Before starting, ensure you have the following installed:
 
 ### Step 1: Clone and Navigate to Project
 
-```bash
+\`\`\`bash
 # Clone the repository (if not already done)
 git clone <your-repo-url>
 cd ChatAI-Pro
-```
+\`\`\`
 
 ### Step 2: Install Dependencies
 
-```bash
+\`\`\`bash
 # Install all project dependencies
 npm install --legacy-peer-deps
-```
+\`\`\`
 
 **Note**: We use `--legacy-peer-deps` to handle some dependency conflicts that have been resolved.
 
 ### Step 3: Environment Configuration
 
 1. **Copy the environment template:**
-   ```bash
+   \`\`\`bash
    cp .env.example .env.local
-   ```
+   \`\`\`
 
 2. **Edit `.env.local` with your configuration:**
-   ```bash
+   \`\`\`bash
    nano .env.local  # or use your preferred editor
-   ```
+   \`\`\`
 
 3. **Required Environment Variables:**
 
-   ```env
+   \`\`\`env
    # Database Configuration
    DATABASE_URL="postgresql://username:password@localhost:5432/chatai_pro"
 
@@ -64,12 +64,12 @@ npm install --legacy-peer-deps
 
    # Development
    NODE_ENV="development"
-   ```
+   \`\`\`
 
 ### Step 4: Database Setup
 
 1. **Create PostgreSQL Database:**
-   ```bash
+   \`\`\`bash
    # Connect to PostgreSQL
    psql -U postgres
 
@@ -82,21 +82,21 @@ npm install --legacy-peer-deps
 
    # Exit PostgreSQL
    \q
-   ```
+   \`\`\`
 
 2. **Update DATABASE_URL in `.env.local`:**
-   ```env
+   \`\`\`env
    DATABASE_URL="postgresql://chatai_user:your_password@localhost:5432/chatai_pro"
-   ```
+   \`\`\`
 
 3. **Generate and Run Database Migrations:**
-   ```bash
+   \`\`\`bash
    # Generate migration files
    npm run db:generate
 
    # Apply migrations to database
    npm run db:migrate
-   ```
+   \`\`\`
 
 ### Step 5: Get AI Provider API Keys
 
@@ -137,22 +137,22 @@ npm install --legacy-peer-deps
 
 ### Development Mode
 
-```bash
+\`\`\`bash
 # Start the development server
 npm run dev
-```
+\`\`\`
 
 The application will be available at [http://localhost:3000](http://localhost:3000)
 
 ### Production Build
 
-```bash
+\`\`\`bash
 # Build the application
 npm run build
 
 # Start production server
 npm start
-```
+\`\`\`
 
 ## 🧪 Testing the Application
 
@@ -204,7 +204,7 @@ npm start
 
 ### 5. Database Verification
 
-```bash
+\`\`\`bash
 # Connect to your database
 psql -U chatai_user -d chatai_pro
 
@@ -219,28 +219,28 @@ SELECT * FROM conversations;
 
 # Exit
 \q
-```
+\`\`\`
 
 ## 🛠️ Development Tools
 
 ### Database Management
 
-```bash
+\`\`\`bash
 # View database in browser
 npm run db:studio
-```
+\`\`\`
 
 This opens Drizzle Studio at [http://localhost:4983](http://localhost:4983)
 
 ### Code Quality
 
-```bash
+\`\`\`bash
 # Run linting
 npm run lint
 
 # Build check
 npm run build
-```
+\`\`\`
 
 ## 🐛 Troubleshooting
 
@@ -281,12 +281,12 @@ npm run build
 ### Load Testing (Optional)
 
 1. **Install testing tools:**
-   ```bash
+   \`\`\`bash
    npm install -g artillery
-   ```
+   \`\`\`
 
 2. **Create test script** (`load-test.yml`):
-   ```yaml
+   \`\`\`yaml
    config:
      target: 'http://localhost:3000'
      phases:
@@ -297,12 +297,12 @@ npm run build
        requests:
          - get:
              url: "/"
-   ```
+   \`\`\`
 
 3. **Run load test:**
-   ```bash
+   \`\`\`bash
    artillery run load-test.yml
-   ```
+   \`\`\`
 
 ## 🚀 Deployment Preparation
 
@@ -344,4 +344,4 @@ Your setup is successful when:
 - ✅ Conversations are saved and retrieved
 - ✅ All pages load without errors
 
-Congratulations! Your ChatAI Pro application is now ready for development and testing. 
+Congratulations! Your ChatAI Pro application is now ready for development and testing.

@@ -17,6 +17,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log("Missing credentials")
           return null
         }
 
@@ -24,12 +25,14 @@ export const authOptions: NextAuthOptions = {
           const user = await db.select().from(users).where(eq(users.email, credentials.email)).limit(1)
 
           if (!user[0] || !user[0].hashedPassword) {
+            console.log("User not found or no password set")
             return null
           }
 
           const isPasswordValid = await bcrypt.compare(credentials.password, user[0].hashedPassword)
 
           if (!isPasswordValid) {
+            console.log("Invalid password")
             return null
           }
 
@@ -75,7 +78,7 @@ export const authOptions: NextAuthOptions = {
         try {
           // Check if user exists in database
           const existingUser = await db.select().from(users).where(eq(users.email, user.email!)).limit(1)
-          
+
           if (!existingUser[0]) {
             // Create new user in database
             await db.insert(users).values({
@@ -87,6 +90,9 @@ export const authOptions: NextAuthOptions = {
               apiUsage: 0,
               apiLimit: 100,
             })
+            console.log("Created new OAuth user:", user.email)
+          } else {
+            console.log("OAuth user already exists:", user.email)
           }
         } catch (error) {
           console.error("Error handling OAuth user:", error)

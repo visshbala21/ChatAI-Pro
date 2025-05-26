@@ -9,14 +9,19 @@ import type { NextRequest } from "next/server"
 
 export const maxDuration = 30
 
+// Validate OpenAI API key
+if (!process.env.OPENAI_API_KEY) {
+  console.error("OPENAI_API_KEY is not configured")
+}
+
 // AI Provider configurations
 const getAIProvider = (model: string) => {
-  const modelMap: Record<string, { provider: any; modelName: string }> = {
-    "gpt-4": { provider: openai, modelName: "gpt-4" },
-    "gpt-4-turbo": { provider: openai, modelName: "gpt-4-turbo" },
-    "gpt-3.5-turbo": { provider: openai, modelName: "gpt-3.5-turbo" },
-    "claude-3": { provider: openai, modelName: "gpt-4" }, // Fallback for demo
-    "gemini-pro": { provider: openai, modelName: "gpt-4" }, // Fallback for demo
+  const modelMap: Record<string, { provider: any; modelName: string; isAvailable: boolean }> = {
+    "gpt-4": { provider: openai, modelName: "gpt-4", isAvailable: !!process.env.OPENAI_API_KEY },
+    "gpt-4-turbo": { provider: openai, modelName: "gpt-4-turbo", isAvailable: !!process.env.OPENAI_API_KEY },
+    "gpt-3.5-turbo": { provider: openai, modelName: "gpt-3.5-turbo", isAvailable: !!process.env.OPENAI_API_KEY },
+    "claude-3": { provider: openai, modelName: "gpt-4", isAvailable: false }, // Fallback for demo
+    "gemini-pro": { provider: openai, modelName: "gpt-4", isAvailable: false }, // Fallback for demo
   }
 
   return modelMap[model] || modelMap["gpt-4"]
@@ -24,6 +29,12 @@ const getAIProvider = (model: string) => {
 
 export async function POST(req: NextRequest) {
   try {
+    // Validate OpenAI API key
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("OpenAI API key not configured")
+      return new Response("OpenAI API key not configured", { status: 500 })
+    }
+
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
@@ -31,6 +42,10 @@ export async function POST(req: NextRequest) {
     }
 
     const { messages: chatMessages, model = "gpt-4", conversationId } = await req.json()
+
+    if (!chatMessages || !Array.isArray(chatMessages) || chatMessages.length === 0) {
+      return new Response("Invalid messages format", { status: 400 })
+    }
 
     // Get user data
     const userData = await db.select().from(users).where(eq(users.id, session.user.id)).limit(1)
@@ -71,10 +86,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Get AI provider configuration
-    const { provider, modelName } = getAIProvider(model)
+    const { provider, modelName, isAvailable } = getAIProvider(model)
 
     // Create system message based on model
-    const systemMessage = `You are a helpful AI assistant powered by ${model}. You are knowledgeable, conversational, and helpful. Provide accurate and useful responses while being engaging and friendly.`
+    let systemMessage = `You are a helpful AI assistant powered by ${model}. You are knowledgeable, conversational, and helpful. Provide accurate and useful responses while being engaging and friendly.`
+
+    // Add special instructions for placeholder models
+    if (!isAvailable && (model === "claude-3" || model === "gemini-pro")) {
+      systemMessage += ` Note: You are currently running on OpenAI's GPT-4 as a fallback since ${model} integration is not yet available.`
+    }
 
     // Stream the AI response
     const result = streamText({
@@ -104,8 +124,10 @@ export async function POST(req: NextRequest) {
           content: assistantMessage,
           metadata: {
             model,
+            actualModel: modelName, // Track what model was actually used
             tokensUsed,
             finishReason: event.finishReason,
+            isPlaceholder: !isAvailable,
           },
         })
 
@@ -113,7 +135,7 @@ export async function POST(req: NextRequest) {
         await db.insert(usageTracking).values({
           userId: user.id,
           conversationId: conversation.id,
-          model,
+          model: `${model}${!isAvailable ? ` (via ${modelName})` : ""}`,
           tokensUsed,
           cost: Math.ceil(tokensUsed * 0.002), // Rough cost calculation in cents
         })
@@ -135,6 +157,16 @@ export async function POST(req: NextRequest) {
     return stream
   } catch (error) {
     console.error("Chat API error:", error)
+
+    if (error instanceof Error) {
+      if (error.message.includes("API key")) {
+        return new Response("Invalid API key", { status: 401 })
+      }
+      if (error.message.includes("quota")) {
+        return new Response("API quota exceeded", { status: 429 })
+      }
+    }
+
     return new Response("Internal server error", { status: 500 })
   }
 }

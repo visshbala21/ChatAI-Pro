@@ -1,11 +1,12 @@
 # ChatAI Pro - Advanced AI Chat Platform
 
-A modern, full-stack AI chat application built with Next.js 15, featuring multiple AI providers, user authentication, conversation persistence, and usage tracking.
+A modern, full-stack AI chat application built with Next.js 15, featuring OpenAI models with placeholders for future AI providers, user authentication, conversation persistence, and usage tracking.
 
 ## 🚀 Features
 
 ### Core Features
-- **Multiple AI Providers**: Support for OpenAI (GPT-4, GPT-3.5), Anthropic (Claude), and Google (Gemini)
+- **OpenAI Integration**: Full support for GPT-4, GPT-4 Turbo, and GPT-3.5 Turbo
+- **Future AI Providers**: Placeholder support for Anthropic Claude and Google Gemini (coming soon)
 - **User Authentication**: Email/password and OAuth (GitHub, Google) authentication
 - **Conversation Management**: Persistent chat history with conversation organization
 - **Real-time Streaming**: Live AI responses with streaming support
@@ -25,16 +26,16 @@ A modern, full-stack AI chat application built with Next.js 15, featuring multip
 - **Frontend**: Next.js 15, React 19, TypeScript
 - **Backend**: Next.js API Routes, NextAuth.js
 - **Database**: PostgreSQL with Drizzle ORM
-- **AI SDKs**: Vercel AI SDK with multiple providers
+- **AI Integration**: Vercel AI SDK with OpenAI
 - **Styling**: Tailwind CSS, Radix UI
 - **Authentication**: NextAuth.js with multiple providers
 - **Deployment**: Vercel-ready
 
 ## 📋 Prerequisites
 
-- Node.js 18+ and pnpm
+- Node.js 18+ and npm
 - PostgreSQL database
-- AI Provider API keys (OpenAI, Anthropic, Google)
+- OpenAI API key (required)
 - OAuth app credentials (optional)
 
 ## 🚀 Quick Start
@@ -44,7 +45,7 @@ A modern, full-stack AI chat application built with Next.js 15, featuring multip
 \`\`\`bash
 git clone <your-repo-url>
 cd ChatAI-Pro
-pnpm install
+npm install --legacy-peer-deps
 \`\`\`
 
 ### 2. Environment Setup
@@ -64,10 +65,8 @@ DATABASE_URL="postgresql://username:password@localhost:5432/chatai_pro"
 NEXTAUTH_SECRET="your-secure-secret-here"
 NEXTAUTH_URL="http://localhost:3000"
 
-# AI Providers (at least one required)
-OPENAI_API_KEY="sk-..."
-ANTHROPIC_API_KEY="sk-ant-..."
-GOOGLE_AI_API_KEY="..."
+# OpenAI (Required)
+OPENAI_API_KEY="sk-your-openai-api-key-here"
 
 # OAuth (optional)
 GITHUB_CLIENT_ID="..."
@@ -80,52 +79,56 @@ GOOGLE_CLIENT_SECRET="..."
 
 Generate and run database migrations:
 \`\`\`bash
-pnpm db:generate
-pnpm db:migrate
+npm run db:generate
+npm run db:migrate
 \`\`\`
 
 ### 4. Development
 
 Start the development server:
 \`\`\`bash
-pnpm dev
+npm run dev
 \`\`\`
 
 Visit [http://localhost:3000](http://localhost:3000) to see your application.
 
-## 🗄️ Database Schema
+## 🤖 AI Models
 
-The application uses the following main tables:
+### Currently Available
+- **GPT-4**: Most capable OpenAI model
+- **GPT-4 Turbo**: Faster version of GPT-4
+- **GPT-3.5 Turbo**: Fast and efficient model
 
-- **users**: User accounts and subscription info
-- **accounts**: OAuth account linking
-- **sessions**: User session management
-- **conversations**: Chat conversation metadata
-- **messages**: Individual chat messages
-- **api_keys**: User's personal API keys
-- **usage_tracking**: API usage and cost tracking
+### Coming Soon (Placeholders)
+- **Claude 3 Models**: Anthropic's AI models (currently uses GPT-4 as fallback)
+- **Gemini Pro**: Google's AI model (currently uses GPT-4 as fallback)
+
+When you select a "Coming Soon" model, the system will:
+1. Use an OpenAI model as a fallback
+2. Inform the AI to roleplay as the requested model
+3. Track both the requested and actual model used
+4. Display a "Coming Soon" badge in the UI
 
 ## 🔧 Configuration
 
-### AI Providers
+### Adding New AI Providers
 
-Configure AI providers in your environment:
+When you're ready to add Anthropic or Google AI:
 
-1. **OpenAI**: Get API key from [OpenAI Platform](https://platform.openai.com)
-2. **Anthropic**: Get API key from [Anthropic Console](https://console.anthropic.com)
-3. **Google**: Get API key from [Google AI Studio](https://makersuite.google.com)
+1. Install the required packages:
+\`\`\`bash
+npm install @ai-sdk/anthropic @ai-sdk/google
+\`\`\`
 
-### OAuth Setup
+2. Add API keys to your environment:
+\`\`\`env
+ANTHROPIC_API_KEY="sk-ant-..."
+GOOGLE_AI_API_KEY="..."
+\`\`\`
 
-For GitHub OAuth:
-1. Go to GitHub Settings > Developer settings > OAuth Apps
-2. Create a new OAuth App
-3. Set Authorization callback URL to `http://localhost:3000/api/auth/callback/github`
-
-For Google OAuth:
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create OAuth 2.0 credentials
-3. Add authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
+3. Update the `getAIProvider` function in `app/api/chat/route.ts`
+4. Set `isAvailable: true` for the new models
+5. Update the UI to remove "Coming Soon" badges
 
 ## 📁 Project Structure
 
@@ -134,7 +137,7 @@ ChatAI-Pro/
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
 │   │   ├── auth/          # Authentication endpoints
-│   │   ├── chat/          # Chat API
+│   │   ├── chat/          # Chat API (OpenAI only)
 │   │   └── conversations/ # Conversation management
 │   ├── chat/              # Chat interface
 │   ├── login/             # Authentication pages
@@ -143,8 +146,6 @@ ChatAI-Pro/
 ├── lib/                   # Utility libraries
 │   ├── auth.ts           # NextAuth configuration
 │   └── db/               # Database configuration
-│       ├── schema.ts     # Database schema
-│       └── index.ts      # Database connection
 ├── middleware.ts          # Route protection
 └── drizzle.config.ts     # Database configuration
 \`\`\`
@@ -160,11 +161,11 @@ ChatAI-Pro/
 
 ### Environment Variables for Production
 
-Make sure to set all required environment variables:
+Make sure to set:
 - Update `NEXTAUTH_URL` to your production domain
 - Use a strong `NEXTAUTH_SECRET`
 - Configure production database URL
-- Add all AI provider API keys
+- Add your OpenAI API key
 
 ## 🔒 Security Features
 
@@ -181,7 +182,7 @@ The application tracks:
 - API calls per user
 - Token usage per conversation
 - Cost estimation
-- Model usage statistics
+- Model usage statistics (including fallback usage)
 
 ## 🤝 Contributing
 
@@ -195,16 +196,8 @@ The application tracks:
 
 This project is licensed under the MIT License.
 
-## 🆘 Support
-
-For support and questions:
-- Check the [Issues](https://github.com/your-username/chatai-pro/issues) page
-- Create a new issue for bugs or feature requests
-
-## 🔄 Updates
-
-This project is actively maintained. Check the [releases](https://github.com/your-username/chatai-pro/releases) for updates.
-
 ---
 
 Built with ❤️ using Next.js and the Vercel AI SDK
+
+**Note**: Currently only OpenAI models are functional. Other AI providers are implemented as placeholders and will use OpenAI models as fallbacks until their respective API keys are configured.
